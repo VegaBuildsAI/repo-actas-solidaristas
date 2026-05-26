@@ -1,0 +1,19 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# System deps: ffmpeg for audio decode, libsndfile for WAV, git for pip VCS deps
+RUN apt-get update && apt-get install -y \
+    curl \
+    ffmpeg \
+    libsndfile1 \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/pyproject.toml .
+RUN mkdir -p src/actas && touch src/actas/__init__.py && pip install --no-cache-dir -e ".[dev]"
+
+# Model cache will be mounted as a Docker volume at runtime
+ENV HF_HOME=/model-cache
+
+CMD rq worker --url ${REDIS_URL:-redis://redis:6379/0} actas
